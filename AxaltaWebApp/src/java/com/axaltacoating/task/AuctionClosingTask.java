@@ -31,17 +31,18 @@ public class AuctionClosingTask extends TimerTask {
             }
 
             // Step 2: Set winning suppliers for completed auctions that don't have winners yet
+            // Standard SQL compatible with MySQL ONLY_FULL_GROUP_BY mode
             String setWinnersSql = 
                 "UPDATE reverse_auctions ra " +
                 "INNER JOIN (" +
-                "    SELECT b1.auction_id, b1.user_id, b1.bid_amount " +
-                "    FROM bids b1 " +
-                "    WHERE b1.bid_amount = (" +
-                "        SELECT MIN(b2.bid_amount) " +
-                "        FROM bids b2 " +
-                "        WHERE b2.auction_id = b1.auction_id" +
-                "    ) " +
-                "    GROUP BY b1.auction_id " +
+                "    SELECT b.auction_id, MIN(COALESCE(b.supplier_id, b.user_id)) AS user_id, mb.min_bid AS bid_amount " +
+                "    FROM bids b " +
+                "    INNER JOIN (" +
+                "        SELECT auction_id, MIN(bid_amount) AS min_bid " +
+                "        FROM bids " +
+                "        GROUP BY auction_id " +
+                "    ) mb ON b.auction_id = mb.auction_id AND b.bid_amount = mb.min_bid " +
+                "    GROUP BY b.auction_id, mb.min_bid " +
                 ") winners ON ra.id = winners.auction_id " +
                 "SET ra.winning_supplier_id = winners.user_id, " +
                 "    ra.current_price = winners.bid_amount " +
