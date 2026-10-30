@@ -1,0 +1,19 @@
+# Secrets & Environment
+.env
+
+# Build outputs
+test-build/
+sources.txt
+build/
+dist/*.war.bak
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.iml
+nbproject/private/
+
+# OS files
+.DS_Store
+Thumbs.db
+

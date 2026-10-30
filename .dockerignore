@@ -1,0 +1,10 @@
+.git
+.gitignore
+.vscode
+AxaltaWebApp/nbproject/private
+AxaltaWebApp/build
+AxaltaWebApp/dist
+test-build
+sources.txt
+*.bat
+

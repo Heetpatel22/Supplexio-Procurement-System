@@ -1,0 +1,63 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: supplexio-app:latest
+    container_name: supplexio-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=${MYSQL_DATABASE:-axalta}
+      - DB_USER=root
+      - DB_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Xms256m -Xmx1024m
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - supplexio-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: supplexio-mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-axalta}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:${MYSQL_HOST_PORT:-3306}:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD:-root} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - supplexio-network
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: supplexio-cloudflared
+    restart: unless-stopped
+    environment:
+      - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-eyJhIjoiMjYyNmIxYzliNmE2YzA0ZWQwNTJhN2ZhNTBlMTYxYzkiLCJ0IjoiMjc0M2M3MzEtNDM3Ni00Y2U1LTg0M2UtOGZlODJlNGY5NDYxIiwicyI6Ik1qWTRZamM0TkdNdE56QTVNUzAwTXpWaExXSXpaVFl0WlRVME56QXhZV1UzTTJZNSJ9}
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-eyJhIjoiMjYyNmIxYzliNmE2YzA0ZWQwNTJhN2ZhNTBlMTYxYzkiLCJ0IjoiMjc0M2M3MzEtNDM3Ni00Y2U1LTg0M2UtOGZlODJlNGY5NDYxIiwicyI6Ik1qWTRZamM0TkdNdE56QTVNUzAwTXpWaExXSXpaVFl0WlRVME56QXhZV1UzTTJZNSJ9}
+    depends_on:
+      - app
+    networks:
+      - supplexio-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  supplexio-network:
+    driver: bridge
